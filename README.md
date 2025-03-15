@@ -1,6 +1,32 @@
-# 네이버 뉴스 수집기
+# Naver News Collector
 
-네이버 API를 통해 기사 리스트를 주기적으로 수집하고 Supabase 데이터베이스에 저장한 뒤, 저장된 데이터를 조회할 수 있는 서버리스 애플리케이션입니다.
+네이버 API를 통해 기사를 수집하고 Supabase에 저장하는 서버리스 애플리케이션입니다.
+
+## 기술 스택
+
+- Next.js 14
+- Node.js 20.x
+- Supabase
+- Naver News API
+
+## 환경 설정
+
+프로젝트를 실행하기 위해 다음 환경 변수가 필요합니다:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+NAVER_CLIENT_ID=your-naver-client-id
+NAVER_CLIENT_SECRET=your-naver-client-secret
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+## 개발 환경 실행
+
+```bash
+npm install
+npm run dev
+```
 
 ## 주요 기능
 
@@ -11,15 +37,6 @@
 - 사용자 피드백 수집 기능
 - 사용자 이용 통계 수집 및 분석 기능
 - 이메일 주소 기반 사용자 인증 기능
-
-## 기술 스택
-
-- **프로그래밍 언어**: JavaScript
-- **프레임워크 및 라이브러리**:
-  - 서버리스 함수: Vercel Serverless Functions
-  - 데이터베이스 관리: Supabase
-  - 프론트엔드 프레임워크: Next.js, React
-  - AI 분류 엔진: 클로드 소넷 3.5
 
 ## 설치 및 실행 방법
 
