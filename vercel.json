@@ -5,10 +5,5 @@
       "src": "package.json",
       "use": "@vercel/next"
     }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs"
-    }
-  }
+  ]
 } 
