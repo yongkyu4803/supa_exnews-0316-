@@ -97,9 +97,28 @@ async function collectAndSaveNews() {
  * Vercel Serverless Function 핸들러
  */
 export default async function handler(req, res) {
+  // CORS 헤더 설정
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // OPTIONS 요청 처리
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  // POST 요청만 허용
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: '허용되지 않는 메서드입니다.' });
+  }
+  
   // Authorization 헤더 검증
   const authHeader = req.headers['authorization'];
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    console.error('인증 실패:', { 
+      receivedAuth: authHeader,
+      expectedAuth: `Bearer ${process.env.CRON_SECRET?.substring(0, 5)}...`
+    });
     return res.status(401).json({ error: '인증되지 않은 요청입니다.' });
   }
 

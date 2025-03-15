@@ -12,8 +12,21 @@ jobs:
       - name: Call News Collection API
         run: |
           echo "Calling API endpoint: ${{ secrets.VERCEL_URL }}/api/cron/collect-news"
-          response=$(curl -X GET "${{ secrets.VERCEL_URL }}/api/cron/collect-news" \
+          response=$(curl -X POST "${{ secrets.VERCEL_URL }}/api/cron/collect-news" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            -w "\n%{http_code}")
-          echo "API Response: $response" 
+            -w "\nStatus Code: %{http_code}")
+          
+          # HTTP 상태 코드 추출
+          status_code=$(echo "$response" | tail -n1 | cut -d' ' -f3)
+          
+          # 응답 본문 (마지막 줄 제외)
+          response_body=$(echo "$response" | sed '$d')
+          
+          echo "Response Body: $response_body"
+          
+          # 상태 코드가 200이 아니면 실패
+          if [ "$status_code" != "200" ]; then
+            echo "Error: API call failed with status code $status_code"
+            exit 1
+          fi 
