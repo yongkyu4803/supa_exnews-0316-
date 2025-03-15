@@ -45,18 +45,15 @@ export default async function handler(req, res) {
     if ((data.length === 0 || forceRefresh === 'true') && process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET) {
       console.log('Supabase에 데이터가 없거나 강제 새로고침 요청이 있어 네이버 API에서 직접 데이터를 가져옵니다.');
       
-      // 검색할 키워드 목록 (간소화된 버전)
-      const KEYWORDS = ['정치', '경제', '사회'];
-      
       try {
-        // 네이버 API를 통해 기사 수집 (정확히 [단독]으로 시작하는 기사만)
-        const rawArticles = await fetchMultipleKeywords(KEYWORDS, 5);
-        console.log(`네이버 API에서 [단독] 기사 ${rawArticles.length}개를 가져왔습니다.`);
+        // 네이버 API를 통해 기사 수집
+        const rawArticles = await fetchMultipleKeywords(null, 100);
+        console.log(`네이버 API에서 단독 기사 ${rawArticles.length}개를 가져왔습니다.`);
         
         if (rawArticles.length > 0) {
           // 기사 데이터 정제
           const cleanedArticles = rawArticles.map(cleanArticleData);
-          console.log(`${cleanedArticles.length}개의 [단독] 기사 데이터를 정제했습니다.`);
+          console.log(`${cleanedArticles.length}개의 단독 기사 데이터를 정제했습니다.`);
           
           // AI를 사용하여 기사 카테고리 분류 (선택적)
           let classifiedArticles;
@@ -96,7 +93,7 @@ export default async function handler(req, res) {
             }
           }
           
-          console.log(`${savedArticleIds.size}개의 [단독] 기사가 저장/업데이트되었습니다. 오류 발생: ${errorCount}개`);
+          console.log(`${savedArticleIds.size}개의 단독 기사가 저장/업데이트되었습니다. 오류 발생: ${errorCount}개`);
           
           // 저장 후 최신 데이터 다시 조회
           try {
@@ -113,7 +110,7 @@ export default async function handler(req, res) {
             console.error('저장 후 데이터 조회 중 오류 발생:', refreshError);
           }
         } else {
-          console.log('네이버 API에서 가져온 [단독] 기사가 없습니다.');
+          console.log('네이버 API에서 가져온 단독 기사가 없습니다.');
           // 결과가 없을 때 메시지 추가
           if (data.length === 0) {
             return res.status(200).json({
@@ -124,7 +121,7 @@ export default async function handler(req, res) {
                 pageSize: pageSizeNum,
                 totalPages: 0
               },
-              message: '[단독] 기사를 찾을 수 없습니다. 나중에 다시 시도해주세요.'
+              message: '단독 기사를 찾을 수 없습니다. 나중에 다시 시도해주세요.'
             });
           }
         }
