@@ -3,15 +3,6 @@ import { batchClassifyArticles } from '../../../lib/aiClassifier';
 import { saveArticle } from '../../../lib/supabase';
 import { supabase } from '../../../lib/supabase';
 
-// 검색할 키워드 목록
-const KEYWORDS = [
-  '정치', '경제', '사회', '문화', '국제', '연예', '스포츠',
-  '코로나', '기후변화', '테크', 'IT', '과학', '교육',
-  '금융', '부동산', '주식', '증시', '환율', '금리',
-  '대통령', '국회', '선거', '정당', '법원', '판결',
-  '기업', '삼성', 'LG', 'SK', '현대', '네이버', '카카오'
-];
-
 /**
  * API 설정 확인
  * @returns {Promise<boolean>} API가 활성화되어 있는지 여부
@@ -52,7 +43,7 @@ async function checkApiSettings() {
  */
 async function collectAndSaveNews() {
   try {
-    console.log('기사 수집 시작...');
+    console.log('기사 수집 시작...', new Date().toISOString());
     
     // API 설정 확인
     const isApiActive = await checkApiSettings();
@@ -63,8 +54,8 @@ async function collectAndSaveNews() {
     }
     
     // 1. 네이버 API를 통해 기사 수집 (단독 기사만)
-    const rawArticles = await fetchMultipleKeywords(KEYWORDS, 20);
-    console.log(`총 ${rawArticles.length}개의 단독 기사를 수집했습니다.`);
+    const rawArticles = await fetchMultipleKeywords(null, 100);  // 최대 100개의 기사 수집
+    console.log(`총 ${rawArticles.length}개의 단독 기사를 수집했습니다.`, new Date().toISOString());
     
     // 수집된 기사가 없는 경우
     if (rawArticles.length === 0) {
@@ -74,20 +65,31 @@ async function collectAndSaveNews() {
     
     // 2. 기사 데이터 정제
     const cleanedArticles = rawArticles.map(cleanArticleData);
+    console.log(`${cleanedArticles.length}개의 기사 데이터를 정제했습니다.`);
     
     // 3. AI를 사용하여 기사 카테고리 분류
     const classifiedArticles = await batchClassifyArticles(cleanedArticles);
-    console.log('기사 카테고리 분류 완료');
+    console.log(`${classifiedArticles.length}개의 기사 카테고리 분류 완료`);
     
     // 4. Supabase 데이터베이스에 저장
     const savePromises = classifiedArticles.map(article => saveArticle(article));
-    await Promise.all(savePromises);
+    const saveResults = await Promise.all(savePromises);
+    const savedCount = saveResults.filter(result => result && result.success).length;
     
-    console.log('기사 저장 완료');
-    return { success: true, count: classifiedArticles.length };
+    console.log(`${savedCount}개의 기사를 저장했습니다.`, new Date().toISOString());
+    return { 
+      success: true, 
+      count: classifiedArticles.length,
+      savedCount,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
     console.error('기사 수집 및 저장 중 오류 발생:', error);
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
   }
 }
 
