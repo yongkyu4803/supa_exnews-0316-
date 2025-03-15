@@ -4,7 +4,7 @@
   "description": "네이버 API를 통해 기사를 수집하고 Supabase에 저장하는 서버리스 애플리케이션",
   "main": "index.js",
   "engines": {
-    "node": "18.x"
+    "node": "18"
   },
   "scripts": {
     "dev": "next dev",
