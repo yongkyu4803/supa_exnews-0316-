@@ -95,21 +95,18 @@ async function collectAndSaveNews() {
  * Vercel Serverless Function 핸들러
  */
 export default async function handler(req, res) {
-  // API 키 검증 (보안을 위해)
-  const apiKey = req.headers['x-api-key'];
-  const validApiKey = process.env.CRON_API_KEY;
-  
-  // Vercel Cron에서 호출된 경우 또는 유효한 API 키가 제공된 경우에만 실행
-  if (req.headers['x-vercel-cron'] === 'true' || apiKey === validApiKey) {
-    try {
-      const result = await collectAndSaveNews();
-      res.status(200).json(result);
-    } catch (error) {
-      console.error('서버리스 함수 실행 중 오류 발생:', error);
-      res.status(500).json({ error: '서버 오류가 발생했습니다.' });
-    }
-  } else {
-    res.status(401).json({ error: '인증되지 않은 요청입니다.' });
+  // Authorization 헤더 검증
+  const authHeader = req.headers['authorization'];
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: '인증되지 않은 요청입니다.' });
+  }
+
+  try {
+    const result = await collectAndSaveNews();
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('서버리스 함수 실행 중 오류 발생:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 }
 
