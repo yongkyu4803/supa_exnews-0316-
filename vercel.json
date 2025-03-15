@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs"
-    }
-  },
   "version": 2,
   "crons": [{
     "path": "/api/cron/collect-news",
