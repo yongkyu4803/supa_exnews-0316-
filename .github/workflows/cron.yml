@@ -11,29 +11,54 @@ jobs:
     steps:
       - name: Call News Collection API
         run: |
-          # API URL 출력 (시크릿 값은 마스킹됨)
-          echo "API URL: ${{ secrets.VERCEL_URL }}/api/cron/collect-news"
-          
-          # curl 요청 실행 및 응답 저장
-          response=$(curl -v -X POST "${{ secrets.VERCEL_URL }}/api/cron/collect-news" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            -w "\nStatus Code: %{http_code}" \
-            2>&1)
-          
-          # 전체 응답 출력 (디버깅용)
-          echo "Full response:"
-          echo "$response"
-          
-          # HTTP 상태 코드 추출
-          status_code=$(echo "$response" | grep "Status Code:" | cut -d' ' -f3)
-          
-          echo "Status code: $status_code"
-          
-          # 상태 코드가 200이 아니면 실패
-          if [ -z "$status_code" ] || [ "$status_code" != "200" ]; then
-            echo "Error: API call failed with status code $status_code"
+          # 환경 변수 확인
+          if [ -z "${{ secrets.VERCEL_URL }}" ]; then
+            echo "Error: VERCEL_URL is not set"
             exit 1
           fi
           
-          echo "API call successful!" 
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "Error: CRON_SECRET is not set"
+            exit 1
+          fi
+          
+          # API URL 구성
+          API_URL="${{ secrets.VERCEL_URL }}/api/cron/collect-news"
+          echo "Calling API at: $API_URL"
+          
+          # curl 요청 실행
+          echo "Making API request..."
+          
+          # 임시 파일 생성
+          RESPONSE_FILE=$(mktemp)
+          HTTP_CODE=$(curl -v -X POST "$API_URL" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --write-out "%{http_code}" \
+            --silent \
+            --output "$RESPONSE_FILE" \
+            2>&1)
+          
+          # curl 종료 코드 저장
+          CURL_EXIT_CODE=$?
+          
+          # curl 자체 오류 확인
+          if [ $CURL_EXIT_CODE -ne 0 ]; then
+            echo "Error: curl command failed with exit code $CURL_EXIT_CODE"
+            exit 1
+          fi
+          
+          echo "HTTP Status Code: $HTTP_CODE"
+          echo "Response body:"
+          cat "$RESPONSE_FILE"
+          
+          # 임시 파일 삭제
+          rm -f "$RESPONSE_FILE"
+          
+          # HTTP 상태 코드 확인
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Error: API request failed with HTTP status code $HTTP_CODE"
+            exit 1
+          fi
+          
+          echo "API call completed successfully!" 
