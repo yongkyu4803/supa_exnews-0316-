@@ -11,5 +11,9 @@ jobs:
     steps:
       - name: Call News Collection API
         run: |
-          curl -X GET ${{ secrets.VERCEL_URL }}/api/cron/collect-news \
-          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" 
+          echo "Calling API endpoint: ${{ secrets.VERCEL_URL }}/api/cron/collect-news"
+          response=$(curl -X GET "${{ secrets.VERCEL_URL }}/api/cron/collect-news" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -w "\n%{http_code}")
+          echo "API Response: $response" 
