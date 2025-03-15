@@ -115,6 +115,5 @@ export default async function handler(req, res) {
 
 // Vercel Cron 설정
 export const config = {
-  runtime: 'nodejs',
   schedule: '*/5 * * * *', // 5분마다 실행
 }; 
