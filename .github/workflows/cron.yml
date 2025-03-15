@@ -11,22 +11,29 @@ jobs:
     steps:
       - name: Call News Collection API
         run: |
-          echo "Calling API endpoint: ${{ secrets.VERCEL_URL }}/api/cron/collect-news"
-          response=$(curl -X POST "${{ secrets.VERCEL_URL }}/api/cron/collect-news" \
+          # API URL 출력 (시크릿 값은 마스킹됨)
+          echo "API URL: ${{ secrets.VERCEL_URL }}/api/cron/collect-news"
+          
+          # curl 요청 실행 및 응답 저장
+          response=$(curl -v -X POST "${{ secrets.VERCEL_URL }}/api/cron/collect-news" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            -w "\nStatus Code: %{http_code}")
+            -w "\nStatus Code: %{http_code}" \
+            2>&1)
+          
+          # 전체 응답 출력 (디버깅용)
+          echo "Full response:"
+          echo "$response"
           
           # HTTP 상태 코드 추출
-          status_code=$(echo "$response" | tail -n1 | cut -d' ' -f3)
+          status_code=$(echo "$response" | grep "Status Code:" | cut -d' ' -f3)
           
-          # 응답 본문 (마지막 줄 제외)
-          response_body=$(echo "$response" | sed '$d')
-          
-          echo "Response Body: $response_body"
+          echo "Status code: $status_code"
           
           # 상태 코드가 200이 아니면 실패
-          if [ "$status_code" != "200" ]; then
+          if [ -z "$status_code" ] || [ "$status_code" != "200" ]; then
             echo "Error: API call failed with status code $status_code"
             exit 1
-          fi 
+          fi
+          
+          echo "API call successful!" 

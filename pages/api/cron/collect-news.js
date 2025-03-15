@@ -97,6 +97,8 @@ async function collectAndSaveNews() {
  * Vercel Serverless Function 핸들러
  */
 export default async function handler(req, res) {
+  console.log('크론 작업 시작:', new Date().toISOString());
+  
   // CORS 헤더 설정
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -109,25 +111,45 @@ export default async function handler(req, res) {
   
   // POST 요청만 허용
   if (req.method !== 'POST') {
+    console.error('잘못된 HTTP 메서드:', req.method);
     return res.status(405).json({ error: '허용되지 않는 메서드입니다.' });
   }
   
   // Authorization 헤더 검증
   const authHeader = req.headers['authorization'];
+  console.log('요청 헤더:', {
+    method: req.method,
+    contentType: req.headers['content-type'],
+    authorization: authHeader ? '존재함' : '없음'
+  });
+  
+  if (!process.env.CRON_SECRET) {
+    console.error('CRON_SECRET 환경 변수가 설정되지 않았습니다.');
+    return res.status(500).json({ error: '서버 설정 오류' });
+  }
+  
   if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     console.error('인증 실패:', { 
-      receivedAuth: authHeader,
-      expectedAuth: `Bearer ${process.env.CRON_SECRET?.substring(0, 5)}...`
+      hasAuth: !!authHeader,
+      matches: authHeader === `Bearer ${process.env.CRON_SECRET}`,
+      receivedAuth: authHeader?.substring(0, 15) + '...',
+      expectedPrefix: 'Bearer ' + process.env.CRON_SECRET?.substring(0, 5) + '...'
     });
     return res.status(401).json({ error: '인증되지 않은 요청입니다.' });
   }
 
   try {
+    console.log('뉴스 수집 시작');
     const result = await collectAndSaveNews();
+    console.log('뉴스 수집 완료:', result);
     res.status(200).json(result);
   } catch (error) {
     console.error('서버리스 함수 실행 중 오류 발생:', error);
-    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    res.status(500).json({ 
+      error: '서버 오류가 발생했습니다.',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 }
 
