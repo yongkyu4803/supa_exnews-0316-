@@ -24,7 +24,8 @@ export default async function handler(req, res) {
   // 환경 변수 디버깅 로그
   console.log('환경 변수 확인:', {
     NODE_ENV: process.env.NODE_ENV,
-    SITE_URL: process.env.NEXT_PUBLIC_SITE_URL
+    SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    VERCEL: process.env.VERCEL
   });
   
   try {
@@ -52,8 +53,12 @@ export default async function handler(req, res) {
       console.log('Supabase에 데이터가 없거나 강제 새로고침 요청이 있어 네이버 API에서 직접 데이터를 가져옵니다.');
       
       try {
+        // Vercel 환경에서는 처리할 기사 수를 제한
+        const maxArticlesToFetch = process.env.VERCEL === '1' ? 30 : 100;
+        console.log(`최대 ${maxArticlesToFetch}개의 기사를 가져옵니다.`);
+        
         // 네이버 API를 통해 기사 수집 (프록시 API 사용)
-        const rawArticles = await fetchMultipleKeywords(null, 100);
+        const rawArticles = await fetchMultipleKeywords(null, maxArticlesToFetch);
         console.log(`네이버 API에서 단독 기사 ${rawArticles.length}개를 가져왔습니다.`);
         
         if (rawArticles.length > 0) {
@@ -77,29 +82,47 @@ export default async function handler(req, res) {
           const savedArticleIds = new Set();
           let errorCount = 0;
           
-          // Supabase에 저장 (순차적으로 처리하여 중복 방지)
-          for (const article of classifiedArticles) {
-            try {
-              // 저장 전 기사 데이터 로깅
-              console.log(`저장 시도: ID=${article.id}, 제목=${article.title.substring(0, 30)}...`);
-              
-              const savedArticle = await saveArticle(article);
-              if (savedArticle) {
-                const savedId = typeof savedArticle === 'object' ? savedArticle.id : savedArticle;
-                savedArticleIds.add(savedId);
-                console.log(`기사 저장 성공: ID=${savedId}`);
-              }
-            } catch (saveError) {
-              errorCount++;
-              console.error(`기사 저장 중 오류 발생 (${article.title.substring(0, 30)}...):`, saveError);
-              // 오류 세부 정보 로깅
-              if (saveError.details) {
-                console.error('오류 세부 정보:', saveError.details);
-              }
+          // 기사를 일괄 처리하는 방식으로 변경
+          const batchSize = 5; // 한 번에 처리할 기사 수
+          
+          for (let i = 0; i < classifiedArticles.length; i += batchSize) {
+            const batch = classifiedArticles.slice(i, i + batchSize);
+            console.log(`배치 ${Math.floor(i/batchSize) + 1}/${Math.ceil(classifiedArticles.length/batchSize)} 처리 중 (${batch.length}개 기사)`);
+            
+            // 각 배치를 병렬로 처리
+            const savePromises = batch.map(article => {
+              return new Promise(async (resolve) => {
+                try {
+                  console.log(`저장 시도: ID=${article.id}, 제목=${article.title.substring(0, 30)}...`);
+                  const savedArticle = await saveArticle(article);
+                  
+                  if (savedArticle) {
+                    const savedId = typeof savedArticle === 'object' ? savedArticle.id : savedArticle;
+                    savedArticleIds.add(savedId);
+                    console.log(`기사 저장 성공: ID=${savedId}`);
+                  }
+                  resolve(true);
+                } catch (saveError) {
+                  errorCount++;
+                  console.error(`기사 저장 중 오류 발생 (${article.title.substring(0, 30)}...):`, saveError);
+                  if (saveError.details) {
+                    console.error('오류 세부 정보:', saveError.details);
+                  }
+                  resolve(false);
+                }
+              });
+            });
+            
+            // 배치 처리 완료 대기
+            await Promise.all(savePromises);
+            
+            // 배치 간 짧은 지연 추가
+            if (i + batchSize < classifiedArticles.length) {
+              await new Promise(resolve => setTimeout(resolve, 500));
             }
           }
           
-          console.log(`${savedArticleIds.size}개의 단독 기사가 저장/업데이트되었습니다. 오류 발생: ${errorCount}개`);
+          console.log(`${savedArticleIds.size}개의 [단독] 기사가 저장/업데이트되었습니다. 오류 발생: ${errorCount}개`);
           
           // 저장 후 최신 데이터 다시 조회
           try {

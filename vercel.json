@@ -1,4 +1,12 @@
 {
+  "functions": {
+    "api/articles.js": {
+      "maxDuration": 30
+    },
+    "api/naver-search.js": {
+      "maxDuration": 30
+    }
+  },
   "crons": [{
     "path": "/api/cron/collect-news",
     "schedule": "0 * * * *"
