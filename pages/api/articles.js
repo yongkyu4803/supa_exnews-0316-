@@ -23,9 +23,8 @@ export default async function handler(req, res) {
   
   // 환경 변수 디버깅 로그
   console.log('환경 변수 확인:', {
-    NAVER_CLIENT_ID_EXISTS: !!process.env.NAVER_CLIENT_ID,
-    NAVER_CLIENT_SECRET_EXISTS: !!process.env.NAVER_CLIENT_SECRET,
-    NODE_ENV: process.env.NODE_ENV
+    NODE_ENV: process.env.NODE_ENV,
+    SITE_URL: process.env.NEXT_PUBLIC_SITE_URL
   });
   
   try {
@@ -49,26 +48,11 @@ export default async function handler(req, res) {
     });
     
     // 데이터가 없거나 강제 새로고침 요청이 있는 경우 네이버 API에서 직접 데이터 가져오기
-    if ((data.length === 0 || forceRefresh === 'true')) {
-      // 네이버 API 키 확인
-      if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
-        console.error('네이버 API 키가 설정되지 않았습니다.');
-        return res.status(200).json({
-          articles: data,
-          pagination: {
-            total: count,
-            page: pageNum,
-            pageSize: pageSizeNum,
-            totalPages: Math.ceil(count / pageSizeNum)
-          },
-          message: '네이버 API 키가 설정되지 않아 새 기사를 가져올 수 없습니다.'
-        });
-      }
-      
+    if (data.length === 0 || forceRefresh === 'true') {
       console.log('Supabase에 데이터가 없거나 강제 새로고침 요청이 있어 네이버 API에서 직접 데이터를 가져옵니다.');
       
       try {
-        // 네이버 API를 통해 기사 수집
+        // 네이버 API를 통해 기사 수집 (프록시 API 사용)
         const rawArticles = await fetchMultipleKeywords(null, 100);
         console.log(`네이버 API에서 단독 기사 ${rawArticles.length}개를 가져왔습니다.`);
         

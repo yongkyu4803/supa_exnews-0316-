@@ -51,10 +51,15 @@ export default function Home() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/articles?page=${currentPage}&pageSize=10${selectedCategory ? `&category=${selectedCategory}` : ''}${user ? `&userEmail=${user.email}` : ''}${forceRefresh ? '&forceRefresh=true' : ''}`);
+      // API 호출 URL 구성
+      const apiUrl = `/api/articles?page=${currentPage}&pageSize=10${selectedCategory ? `&category=${selectedCategory}` : ''}${user ? `&userEmail=${user.email}` : ''}${forceRefresh ? '&forceRefresh=true' : ''}`;
+      console.log('API 호출 URL:', apiUrl);
+      
+      const response = await fetch(apiUrl);
       
       if (!response.ok) {
-        throw new Error('기사를 불러오는 중 오류가 발생했습니다.');
+        const errorData = await response.json();
+        throw new Error(errorData.error || '기사를 불러오는 중 오류가 발생했습니다.');
       }
       
       const data = await response.json();
@@ -67,7 +72,7 @@ export default function Home() {
       }
     } catch (err) {
       console.error('기사 로드 중 오류 발생:', err);
-      setError('기사를 불러오는 중 오류가 발생했습니다.');
+      setError(err.message || '기사를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
       setRefreshing(false);
