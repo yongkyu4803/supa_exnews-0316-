@@ -21,6 +21,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: '허용되지 않는 메서드입니다.' });
   }
   
+  // 환경 변수 디버깅 로그
+  console.log('환경 변수 확인:', {
+    NAVER_CLIENT_ID_EXISTS: !!process.env.NAVER_CLIENT_ID,
+    NAVER_CLIENT_SECRET_EXISTS: !!process.env.NAVER_CLIENT_SECRET,
+    NODE_ENV: process.env.NODE_ENV
+  });
+  
   try {
     // 쿼리 파라미터 추출
     const { page = 1, pageSize = 10, category, userEmail, forceRefresh } = req.query;
@@ -42,7 +49,22 @@ export default async function handler(req, res) {
     });
     
     // 데이터가 없거나 강제 새로고침 요청이 있는 경우 네이버 API에서 직접 데이터 가져오기
-    if ((data.length === 0 || forceRefresh === 'true') && process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET) {
+    if ((data.length === 0 || forceRefresh === 'true')) {
+      // 네이버 API 키 확인
+      if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
+        console.error('네이버 API 키가 설정되지 않았습니다.');
+        return res.status(200).json({
+          articles: data,
+          pagination: {
+            total: count,
+            page: pageNum,
+            pageSize: pageSizeNum,
+            totalPages: Math.ceil(count / pageSizeNum)
+          },
+          message: '네이버 API 키가 설정되지 않아 새 기사를 가져올 수 없습니다.'
+        });
+      }
+      
       console.log('Supabase에 데이터가 없거나 강제 새로고침 요청이 있어 네이버 API에서 직접 데이터를 가져옵니다.');
       
       try {
@@ -128,6 +150,16 @@ export default async function handler(req, res) {
       } catch (apiError) {
         console.error('네이버 API 호출 중 오류 발생:', apiError);
         // API 호출 실패 시 기존 데이터 사용
+        return res.status(200).json({
+          articles: data,
+          pagination: {
+            total: count,
+            page: pageNum,
+            pageSize: pageSizeNum,
+            totalPages: Math.ceil(count / pageSizeNum)
+          },
+          message: '네이버 API 호출 중 오류가 발생했습니다: ' + apiError.message
+        });
       }
     }
     

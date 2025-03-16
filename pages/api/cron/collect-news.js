@@ -115,31 +115,40 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: '허용되지 않는 메서드입니다.' });
   }
   
+  // 환경 변수 확인
+  if (!process.env.CRON_SECRET) {
+    console.error('CRON_SECRET 환경 변수가 설정되지 않았습니다.');
+    return res.status(500).json({ error: '서버 설정 오류: CRON_SECRET이 없습니다.' });
+  }
+  
   // Authorization 헤더 검증
   const authHeader = req.headers['authorization'];
   console.log('요청 헤더:', {
     method: req.method,
     contentType: req.headers['content-type'],
-    authorization: authHeader ? '존재함' : '없음'
+    authorization: authHeader ? `${authHeader.substring(0, 15)}...` : '없음'
   });
   
-  if (!process.env.CRON_SECRET) {
-    console.error('CRON_SECRET 환경 변수가 설정되지 않았습니다.');
-    return res.status(500).json({ error: '서버 설정 오류' });
-  }
+  // 예상되는 인증 헤더
+  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
+  console.log('인증 비교:', {
+    receivedLength: authHeader ? authHeader.length : 0,
+    expectedLength: expectedAuth.length,
+    receivedPrefix: authHeader ? authHeader.substring(0, 10) : '없음',
+    expectedPrefix: expectedAuth.substring(0, 10),
+    isExactMatch: authHeader === expectedAuth
+  });
   
-  if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!authHeader || authHeader !== expectedAuth) {
     console.error('인증 실패:', { 
       hasAuth: !!authHeader,
-      matches: authHeader === `Bearer ${process.env.CRON_SECRET}`,
-      receivedAuth: authHeader?.substring(0, 15) + '...',
-      expectedPrefix: 'Bearer ' + process.env.CRON_SECRET?.substring(0, 5) + '...'
+      matches: authHeader === expectedAuth
     });
     return res.status(401).json({ error: '인증되지 않은 요청입니다.' });
   }
 
   try {
-    console.log('뉴스 수집 시작');
+    console.log('인증 성공! 뉴스 수집 시작');
     const result = await collectAndSaveNews();
     console.log('뉴스 수집 완료:', result);
     res.status(200).json(result);

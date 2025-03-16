@@ -29,21 +29,22 @@ jobs:
           API_URL="$VERCEL_URL/api/cron/collect-news"
           echo "Calling API at: $API_URL"
           
-          # Authorization 헤더 구성
+          # Authorization 헤더 구성 (정확한 형식으로)
           AUTH_HEADER="Bearer $CRON_SECRET"
+          echo "Authorization header length: ${#AUTH_HEADER}"
+          echo "Authorization header prefix: ${AUTH_HEADER:0:10}..."
           
           # curl 요청 실행
           echo "Making API request..."
           
           # 임시 파일 생성
           RESPONSE_FILE=$(mktemp)
-          HTTP_CODE=$(curl -v -X POST "$API_URL" \
+          HTTP_CODE=$(curl -X POST "$API_URL" \
             -H "Authorization: $AUTH_HEADER" \
             -H "Content-Type: application/json" \
             --write-out "%{http_code}" \
             --silent \
-            --output "$RESPONSE_FILE" \
-            2>&1)
+            --output "$RESPONSE_FILE")
           
           # curl 종료 코드 저장
           CURL_EXIT_CODE=$?
